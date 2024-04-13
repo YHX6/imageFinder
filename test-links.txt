@@ -1,0 +1,16 @@
+Please paste your list of test URLs below:
+
+
+
+
+
+# Some URLs that failed and posible reasons
+https://www.pexels.com/
+
+
+# Posible reasons:
+1. account login needed
+    -- could be solved by providing user credentials using `Connection.data()`` API
+    -- after login we could use cookies to login (`Connection.cookies(res.cookies())` )
+2. timeout
+3. IP(sending to many requests)

@@ -1,0 +1,196 @@
+<html>
+<head>
+	<title>Servlet Example</title>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+</head>
+<body>
+	<h1>Eulerity Take-Home Challenge</h1>
+
+	<!-- <h2>How it works</h2>
+	<ul>
+		<li>Pressing the submit button on this page will make a POST
+			request to /main</li>
+		<li>That request will contain a form parameter with the url
+			populated in the input box below</li>
+		<li>The ImageFinder servlet will respond to the request with a
+			list of image urls</li>
+		<li>This page contains javascript to send the request and use the
+			response to build a list of images</li>
+	</ul>
+	<h2>Backend Developers</h2>
+	<ul>
+		<li>You can update the ImageFinder servlet to add crawling logic</li>
+		<li>Feel free to add as many classes/packages/files/third party
+			libraries as you'd like</li>
+		<li>We recommend JSoup for parsing web pages</li>
+		<li>You can update this page's html/css/style if you plan on
+			improving the interface</li>
+		<li>Your final submission does not need to contain any of the
+			files included herein</li>
+		<li>This project is just skeleton code so you can hit the ground
+			running.</li>
+		<li>Some ideas:
+			<ul>
+			<li>Crawl not only the given url, but other pages in the same domain</li>
+			<li>Make your crawler multithreaded to speed up response times</li>
+			<li>Be a friendly crawler and try not to hammer a site</li>
+			<li>Think about how to identify different classes of images and do they need special handling</li>
+			<li>Can you identify images as logos? Perhaps collect favicons?</li>
+			<li>Can you mark images that contain people?</li>
+			</ul>
+		</li>
+	</ul>
+	<h2>Important Notes</h2>
+	<p>Congratulations on making it this far into the interview
+		process!</p>
+	<p>
+	This is a free-form hackathon for a very important reason. We wish to see what ideas you can bring to the table.
+	</p>
+	<p><strong>If your submission only contains 5-10 lines of new code, please think twice about submitting it.</strong> If you need more time, you can ask for it.
+	</p>
+	<p>
+	You can use one of the ideas above, but feel free to go off and build something completely different. 
+	The important thing is to submit something that highlights your strengths as a developer.
+	</p>
+	<p>
+	  <b>Remember, this is your chance to show off how you can best contribute to our team.</b>
+	</p>
+	<p>Please remember to think about good design and code style. Comments in your code are great, but thought should also be taken in how to name your variables and method.</p>
+ -->
+
+ 	<main>
+		<div class="profile">
+			<div class="name">Finished by <b>Yaohong Xiang</b></div>
+			<div>xiang.yao@northeastern.edu</div>
+		</div>
+
+
+		<div class="instructions">
+			<div>Below are the workflow for backend: </div>
+			<ul>
+				<li>Get the all the "href" for the given page, each href correspond to a subpage</li>
+				<li>Multithreading to crawling different pages</li>
+				<li>Use the img information (alt, class, id) to get the information of the img and label it</li>
+			</ul>
+			<div>Below are the approaches and techniques used in the task: </div>
+			<ul>
+				<li>Set up Jsoup user Agent and Proxy in case access forbidden</li>
+				<li>Enable entering user login credentials for certain websites</li>
+				<li>A ConcurrentHashMap is used for avoiding re-crawling the same page</li>
+				<li>Redis with an IP pool for dynamic proxy changes (prevent IP blocks when too many requests are sent in certain time period)</li>
+			</ul>
+
+
+			<div>Below are some approaches implemented  to identify the logo and label the image:</div>
+			<ul>
+				<li>Check image filenames and alt attributes</li>
+				<li>Check the CSS class or id</li>
+			</ul>
+		</div>
+
+		<div class="input">
+			<form id="input-form">
+				<label for="url" id="input-url">
+					Enter Website URL:
+					<input type="text" name="url" placeholder="Input website for image crawl..">
+				</label>
+				
+
+				<div id="input-check">
+					Add login Credentials?
+					<div class="checkbox-wrapper-10">
+						<input class="tgl tgl-flip" id="add-credentials" type="checkbox"/>
+						<label class="tgl-btn" data-tg-off="Nope" data-tg-on="Yeah!" for="add-credentials"></label>
+					  </div>
+				</div>
+
+
+				<label for="username" id="input-username" class="hidden">
+					Enter Your Username:
+					<input type="text" name="username" placeholder="Input username for this website...">
+				</label>
+
+				<label for="password" id="input-password" class="hidden">
+					Enter Your Password:
+					<input type="password" name="password" placeholder="Input password for this website...">
+				</label>
+				
+			</form>
+			<div class="submit-block"><button type="button" class="submit-btn">Submit!</button></div>
+		</div>
+
+
+		<div class="result-title" id="result-counts">Results:</div>
+		<div class="results"></div>
+
+	</main>
+
+
+
+	<script>
+		var resultList = document.querySelector('.results');
+		var urlInput = document.querySelector('input[name=url]')
+
+		apiCallBack = function(xhr, callback) {
+			if (xhr.readyState == XMLHttpRequest.DONE) {
+				if (xhr.status != 200) {
+					let message = xhr.status + ":" + xhr.statusText + ":"
+							+ xhr.responseText;
+					alert(message);
+					throw 'API call returned bad code: ' + xhr.status;
+				}
+				let response = xhr.responseText ? JSON.parse(xhr.responseText)
+						: null;
+				if (callback) {
+					callback(response);
+				}
+			}
+		}
+
+		updateList = function(response) {
+			resultList.innerHTML = '';
+			console.log(response);
+			let title = document.getElementById('result-counts');
+			title.textContent = response.length + ' Results Found.';
+			
+			for (var i = 0; i < response.length; i++) {
+
+				var img = document.createElement("img"); 
+				img.src = response[i];
+				
+
+				var div = document.createElement("div");  
+				div.className = "img-box";  
+				div.appendChild(img); 
+
+				resultList.appendChild(div);
+			}
+		}
+
+		makeApiCall = function(url, method, obj, callback) {
+			let xhr = new XMLHttpRequest();
+			xhr.open(method, url);
+			xhr.onreadystatechange = apiCallBack.bind(null, xhr, callback);
+			xhr.send(obj ? obj instanceof FormData || obj.constructor == String ? obj : JSON.stringify(obj) : null);
+		}
+
+		document.querySelector('button').addEventListener("click", function(event) {
+			event.preventDefault();
+			makeApiCall('/main?url=' + urlInput.value, 'POST', null, updateList);
+		});
+
+		
+		// for adding credentials
+		document.getElementById('add-credentials').addEventListener('change', function() {
+			var userNameInputs = document.getElementById('input-username');
+			userNameInputs.classList.toggle('hidden', !this.checked);
+			console.log(userNameInputs)
+
+
+			var passwordInputs = document.getElementById('input-password');
+			passwordInputs.classList.toggle('hidden', !this.checked);
+		});
+	</script>
+</body>
+
+</html>
