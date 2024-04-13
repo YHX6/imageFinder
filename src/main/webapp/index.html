@@ -142,13 +142,63 @@
 			}
 		}
 
+
+		// <div class="result-card">
+		// 		<div class="img-box"><img src="https://www.w3schools.com/images/lamp.jpg" alt=""></div>
+		// 		<div class="img-page"><b>Page: </b>https://www.w3schools.com</div>
+		// 		<div class="img-src"><b>URL: </b>https://www.w3schools.com/images/lamp.jpg</div>
+		// 		<div class="img-labels"><b>Labels: </b>asd</div>
+		// 		<div class="img-alt"><b>Alt: </b>W3Schools.comda  asd asd am</div>
+		// 	</div>
+
 		updateList = function(response) {
 			resultList.innerHTML = '';
 			console.log(response);
 			let title = document.getElementById('result-counts');
 			title.textContent = response.length + ' Results Found.';
-			
-			
+
+			for (var i = 0; i < response.length; i++) {
+				// Create the container div
+				var resultCard = document.createElement("div");
+				resultCard.className = "result-card";
+
+				// image
+				var imgBox = document.createElement("div");
+				imgBox.className = "img-box";
+				var img = document.createElement("img");
+				img.src = response[i].src;  
+				img.alt = response[i].alt;  
+				imgBox.appendChild(img);
+				resultCard.appendChild(imgBox);
+
+				// url of the page 
+				var imgUrl = document.createElement("div");
+				imgUrl.className = "img-url";
+				imgUrl.innerHTML = "<b>Page: </b>" + response[i].url;  
+				resultCard.appendChild(imgUrl);
+
+				// src
+				var imgSrc = document.createElement("div");
+				imgSrc.className = "img-src";
+				imgSrc.innerHTML = "<b>URL: </b>" + response[i].src; 
+				resultCard.appendChild(imgSrc);
+
+				// labels
+				var imgLabels = document.createElement("div");
+				imgLabels.className = "img-labels";
+				var labelsText = response[i].labels.join(", "); 
+				imgLabels.innerHTML = "<b>Labels: </b>" + labelsText;  
+				resultCard.appendChild(imgLabels);
+
+				// alt
+				var imgAlt = document.createElement("div");
+				imgAlt.className = "img-alt";
+				imgAlt.innerHTML = "<b>Alt: </b>" + response[i].alt; 
+				resultCard.appendChild(imgAlt);
+
+				resultList.appendChild(resultCard);
+			}
+
 		}
 
 		makeApiCall = function(url, method, obj, callback) {

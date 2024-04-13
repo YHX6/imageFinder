@@ -123,7 +123,7 @@ public class ImageFinder extends HttpServlet{
 				String src = pair[0];
 				String alt = pair[1];
 				List<String> labels = openNLPService.extractAllEntities(alt);
-				ResponseModel model = new ResponseModel(src, alt, labels);
+				ResponseModel model = new ResponseModel(src, alt, key, labels);
 				res.add(model);
 			}
 		}
