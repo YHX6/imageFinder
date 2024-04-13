@@ -2,12 +2,15 @@ package com.eulerity.hackathon.imagefinder;
 
 import java.io.IOException;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.eulerity.hackathon.models.ResponseModel;
+import com.eulerity.hackathon.services.OpenNLPService;
 import com.eulerity.hackathon.services.WebCrawlerService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -25,6 +28,7 @@ import java.util.concurrent.*;
 public class ImageFinder extends HttpServlet{
 	private WebCrawlerService wcService;
 	private ExecutorService executor;
+	private OpenNLPService openNLPService;
 	private static final long serialVersionUID = 1L;
 	protected static final Gson GSON = new GsonBuilder().create();
 
@@ -34,14 +38,36 @@ public class ImageFinder extends HttpServlet{
 		super.init();
 		wcService = new WebCrawlerService();
 		executor = Executors.newFixedThreadPool(10);
-	}
+        try {
+			ServletContext context = getServletContext();
+            openNLPService = new OpenNLPService(context);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+//	public static void main(String[] args) {
+//		try {
+//			ServletContext context = getServletContext();
+//			String modelPath = context.getRealPath("/WEB-INF/models/opennlp-en-ud-ewt-tokens-1.0-1.9.3.bin");
+//			OpenNLPService extractor = new OpenNLPService("/WEB-INF/models/opennlp-en-ud-ewt-tokens-1.0-1.9.3.bin", "en-ner-person.bin"); // Adjust the model files as needed
+//			List<String> entities = extractor.extractEntities("Barack Obama was the president of the United States.");
+//			for (String entity : entities) {
+//				System.out.println("Entity: " + entity);
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
 
 
 
 	@Override
 	protected final void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		resp.setContentType("text/json");
-//		resp.setContentType("application/json");
+//		resp.setContentType("text/json");
+		resp.setContentType("application/json");
+		resp.setCharacterEncoding("UTF-8");
+
 		String url = req.getParameter("url");
 		System.out.println(url);
 
@@ -51,8 +77,12 @@ public class ImageFinder extends HttpServlet{
 		String mainURL = removeTrailingSlash(url);
 
 		// 2.run image crawl in each page with multitheading
-		ConcurrentHashMap<String, List<String>> results = new ConcurrentHashMap<>(); // create a variable to store all the data
+		ConcurrentHashMap<String, List<String[]>> results = new ConcurrentHashMap<>(); // create a variable to store all the data
 		List<Future<?>> futures = new ArrayList<>();
+
+		List<String> entities = openNLPService.extractAllEntities("Barack Obama was the president of the United States.");
+		System.out.println(entities.toString());
+
 
 		// Submit tasks and collect their Future objects
 		for (int i = 0; i < 2; i++) {
@@ -78,28 +108,23 @@ public class ImageFinder extends HttpServlet{
 		System.out.println(results.toString());
 
 
-		// 1.if return an array
-		String[] res = convertToArray(results);
-		resp.getWriter().print(GSON.toJson(res));
-
-
-		// 2/if return a hashmap
-//		String jsonResponse = GSON.toJson(results);
-//		resp.getWriter().write(jsonResponse);
+		// return as json
+		List<ResponseModel> models = convertToModels(results);
+		String jsonResponse = GSON.toJson(models);
+		resp.getWriter().write(jsonResponse);
 	}
 
-	private String[] convertToArray(ConcurrentHashMap<String, List<String>> results){
-		int totalLen = 0;
-		for(String key:results.keySet()){
-			totalLen += results.get(key).size();
-		}
 
-		String[] res = new String[totalLen];
-		int index = 0;
+
+	private List<ResponseModel> convertToModels(ConcurrentHashMap<String, List<String[]>> results){
+		List<ResponseModel> res = new ArrayList<>();
 		for(String key:results.keySet()){
-			for(String url:results.get(key)){
-				res[index] = url;
-				index ++;
+			for(String[] pair:results.get(key)){
+				String src = pair[0];
+				String alt = pair[1];
+				List<String> labels = openNLPService.extractAllEntities(alt);
+				ResponseModel model = new ResponseModel(src, alt, labels);
+				res.add(model);
 			}
 		}
 
@@ -107,12 +132,12 @@ public class ImageFinder extends HttpServlet{
 	}
 
 
-	private void crawlImagesFromSubPage(String subPageURL,ConcurrentHashMap<String, List<String>> results){
+	private void crawlImagesFromSubPage(String subPageURL,ConcurrentHashMap<String, List<String[]>> results){
 		try {
 			System.out.println(subPageURL);
 			if (results.containsKey(subPageURL)) return;
 
-			List<String> imageURLs = wcService.crawlImage(subPageURL);
+			List<String[]> imageURLs = wcService.crawlImage(subPageURL);
 			synchronized (results) {
 				results.put(subPageURL, imageURLs);
 			}
@@ -131,8 +156,6 @@ public class ImageFinder extends HttpServlet{
 		}
 		return str;
 	}
-
-
 
 
 	@Override

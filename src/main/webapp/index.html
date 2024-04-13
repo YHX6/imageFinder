@@ -70,7 +70,7 @@
 			<ul>
 				<li>Get the all the "href" for the given page, each href correspond to a subpage</li>
 				<li>Multithreading to crawling different pages</li>
-				<li>Use the img information (alt, class, id) to get the information of the img and label it</li>
+				<li>Use the img information (alt) to get the information of the img and label it</li>
 			</ul>
 			<div>Below are the approaches and techniques used in the task: </div>
 			<ul>
@@ -78,13 +78,8 @@
 				<li>Enable entering user login credentials for certain websites</li>
 				<li>A ConcurrentHashMap is used for avoiding re-crawling the same page</li>
 				<li>Redis with an IP pool for dynamic proxy changes (prevent IP blocks when too many requests are sent in certain time period)</li>
-			</ul>
-
-
-			<div>Below are some approaches implemented  to identify the logo and label the image:</div>
-			<ul>
-				<li>Check image filenames and alt attributes</li>
-				<li>Check the CSS class or id</li>
+				<li>Use Apache OpenNLP for entity recognition for the image</li>
+				<li>Use String pattern to find logo</li>
 			</ul>
 		</div>
 
@@ -153,18 +148,7 @@
 			let title = document.getElementById('result-counts');
 			title.textContent = response.length + ' Results Found.';
 			
-			for (var i = 0; i < response.length; i++) {
-
-				var img = document.createElement("img"); 
-				img.src = response[i];
-				
-
-				var div = document.createElement("div");  
-				div.className = "img-box";  
-				div.appendChild(img); 
-
-				resultList.appendChild(div);
-			}
+			
 		}
 
 		makeApiCall = function(url, method, obj, callback) {
