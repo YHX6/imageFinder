@@ -2,19 +2,20 @@ package com.eulerity.hackathon.imagefinder;
 
 import java.io.IOException;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.eulerity.hackathon.models.ResponseModel;
+import com.eulerity.hackathon.services.OpenNLPService;
 import com.eulerity.hackathon.services.WebCrawlerService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -25,37 +26,52 @@ import java.util.concurrent.*;
 public class ImageFinder extends HttpServlet{
 	private WebCrawlerService wcService;
 	private ExecutorService executor;
+	private OpenNLPService openNLPService;
 	private static final long serialVersionUID = 1L;
 	protected static final Gson GSON = new GsonBuilder().create();
+
 
 
 	@Override
 	public void init() throws ServletException {
 		super.init();
 		wcService = new WebCrawlerService();
-		executor = Executors.newFixedThreadPool(10);
-	}
+		executor = Executors.newFixedThreadPool(50);  // 50 threads pool
+        try {
+			ServletContext context = getServletContext();
+            openNLPService = new OpenNLPService(context);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 
 
 	@Override
 	protected final void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		resp.setContentType("text/json");
-//		resp.setContentType("application/json");
+//		resp.setContentType("text/json");
+		resp.setContentType("application/json");
+		resp.setCharacterEncoding("UTF-8");
+
 		String url = req.getParameter("url");
 		System.out.println(url);
 
 		// 1. get all the hrefs in the page(subpages)
 		List<String> hrefs = wcService.crawlHrefs(url);
 		System.out.println("Job starts...");
+		System.out.println(hrefs.toString());
 		String mainURL = removeTrailingSlash(url);
 
 		// 2.run image crawl in each page with multitheading
-		ConcurrentHashMap<String, List<String>> results = new ConcurrentHashMap<>(); // create a variable to store all the data
+		ConcurrentHashMap<String, List<String[]>> results = new ConcurrentHashMap<>(); // create a variable to store all the data
 		List<Future<?>> futures = new ArrayList<>();
 
+		List<String> entities = openNLPService.extractAllEntities("Barack Obama was the president of the United States.");
+		System.out.println(entities.toString());
+
+
 		// Submit tasks and collect their Future objects
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < hrefs.size(); i++) {
 			final int hrefIndex = i;
 			String subPageURL = mainURL + hrefs.get(hrefIndex);
 			Future<?> future = executor.submit(() -> crawlImagesFromSubPage(subPageURL, results));
@@ -78,41 +94,49 @@ public class ImageFinder extends HttpServlet{
 		System.out.println(results.toString());
 
 
-		// 1.if return an array
-		String[] res = convertToArray(results);
-		resp.getWriter().print(GSON.toJson(res));
-
-
-		// 2/if return a hashmap
-//		String jsonResponse = GSON.toJson(results);
-//		resp.getWriter().write(jsonResponse);
+		// return as json
+		List<ResponseModel> models = convertToModels(results);
+		String jsonResponse = GSON.toJson(models);
+		resp.getWriter().write(jsonResponse);
 	}
 
-	private String[] convertToArray(ConcurrentHashMap<String, List<String>> results){
-		int totalLen = 0;
-		for(String key:results.keySet()){
-			totalLen += results.get(key).size();
-		}
 
-		String[] res = new String[totalLen];
-		int index = 0;
+
+	private List<ResponseModel> convertToModels(ConcurrentHashMap<String, List<String[]>> results){
+		List<ResponseModel> res = new ArrayList<>();
 		for(String key:results.keySet()){
-			for(String url:results.get(key)){
-				res[index] = url;
-				index ++;
+			for(String[] pair:results.get(key)){
+				String src = pair[0];
+				String alt = pair[1];
+				List<String> labels = openNLPService.extractAllEntities(alt);
+				// check if logo
+				if (isLogo(src, alt)){
+					labels.add(0, "Logo");
+				}
+
+				ResponseModel model = new ResponseModel(src, alt, key, labels);
+				res.add(model);
 			}
 		}
 
 		return res;
 	}
 
+	// check if logo
+	public boolean isLogo(String src, String alt){
+		if(alt.toLowerCase().contains("logo") || src.toLowerCase().contains("logo")){
+			return true;
+		}else{
+			return false;
+		}
+	}
 
-	private void crawlImagesFromSubPage(String subPageURL,ConcurrentHashMap<String, List<String>> results){
+	private void crawlImagesFromSubPage(String subPageURL,ConcurrentHashMap<String, List<String[]>> results){
 		try {
 			System.out.println(subPageURL);
 			if (results.containsKey(subPageURL)) return;
 
-			List<String> imageURLs = wcService.crawlImage(subPageURL);
+			List<String[]> imageURLs = wcService.crawlImage(subPageURL);
 			synchronized (results) {
 				results.put(subPageURL, imageURLs);
 			}
@@ -131,8 +155,6 @@ public class ImageFinder extends HttpServlet{
 		}
 		return str;
 	}
-
-
 
 
 	@Override
