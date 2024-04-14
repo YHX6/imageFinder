@@ -112,21 +112,8 @@ public class OpenNLPService {
         combinedList.addAll(organizations);
         combinedList.addAll(locations);
 
-        // if is a logo
-        if (isLogo(alt)){
-            combinedList.add(0, "Logo");
-        }
 
         return combinedList;
-    }
-
-    // check if logo
-    public boolean isLogo(String alt){
-        if(alt.toLowerCase().contains("logo")){
-            return true;
-        }else{
-            return false;
-        }
     }
 
 }

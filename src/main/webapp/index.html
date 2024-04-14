@@ -70,17 +70,19 @@
 			<ul>
 				<li>Get the all the "href" for the given page, each href correspond to a subpage</li>
 				<li>Multithreading to crawling different pages</li>
+				<li>Log the page information that failed due to proxy issues for future re-crawling</li>
 				<li>Use the img information (alt) to get the information of the img and label it</li>
 			</ul>
 			<div>Below are the approaches and techniques used in the task: </div>
 			<ul>
 				<li>Set up Jsoup user Agent and Proxy in case access forbidden</li>
-				<li>Enable entering user login credentials for certain websites</li>
 				<li>A ConcurrentHashMap is used for avoiding re-crawling the same page</li>
 				<li>Redis with an IP pool for dynamic proxy changes (prevent IP blocks when too many requests are sent in certain time period)</li>
 				<li>Use Apache OpenNLP for entity recognition for the image</li>
 				<li>Use String pattern to find logo</li>
 			</ul>
+
+			<div id="notes"><i>I use a proxy pool to prevent IP rate limiting and IP banning. The proxies are currently mostly from China. Due to the Chinese Internet firewall, the project can only get images from chinese websites and certain US websites</i></div>
 		</div>
 
 		<div class="input">
@@ -90,28 +92,8 @@
 					<input type="text" name="url" placeholder="Input website for image crawl..">
 				</label>
 				
-
-				<div id="input-check">
-					Add login Credentials?
-					<div class="checkbox-wrapper-10">
-						<input class="tgl tgl-flip" id="add-credentials" type="checkbox"/>
-						<label class="tgl-btn" data-tg-off="Nope" data-tg-on="Yeah!" for="add-credentials"></label>
-					  </div>
-				</div>
-
-
-				<label for="username" id="input-username" class="hidden">
-					Enter Your Username:
-					<input type="text" name="username" placeholder="Input username for this website...">
-				</label>
-
-				<label for="password" id="input-password" class="hidden">
-					Enter Your Password:
-					<input type="password" name="password" placeholder="Input password for this website...">
-				</label>
-				
+				<div class="submit-block"><button type="button" class="submit-btn">Submit!</button></div>
 			</form>
-			<div class="submit-block"><button type="button" class="submit-btn">Submit!</button></div>
 		</div>
 
 
@@ -210,20 +192,22 @@
 
 		document.querySelector('button').addEventListener("click", function(event) {
 			event.preventDefault();
+			let title = document.getElementById('result-counts');
+			title.textContent = "Busy getting the images now...";
 			makeApiCall('/main?url=' + urlInput.value, 'POST', null, updateList);
 		});
 
 		
 		// for adding credentials
-		document.getElementById('add-credentials').addEventListener('change', function() {
-			var userNameInputs = document.getElementById('input-username');
-			userNameInputs.classList.toggle('hidden', !this.checked);
-			console.log(userNameInputs)
+		// document.getElementById('add-credentials').addEventListener('change', function() {
+		// 	var userNameInputs = document.getElementById('input-username');
+		// 	userNameInputs.classList.toggle('hidden', !this.checked);
+		// 	console.log(userNameInputs)
 
 
-			var passwordInputs = document.getElementById('input-password');
-			passwordInputs.classList.toggle('hidden', !this.checked);
-		});
+		// 	var passwordInputs = document.getElementById('input-password');
+		// 	passwordInputs.classList.toggle('hidden', !this.checked);
+		// });
 	</script>
 </body>
 

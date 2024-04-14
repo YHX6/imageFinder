@@ -71,7 +71,6 @@
       <version>1.9.3</version> <!-- This version should be compatible with Java 8 -->
     </dependency>
   </dependencies>
-
   <build>
     <!-- for hot reload of the web application -->
     <outputDirectory>${project.build.directory}/${project.build.finalName}/WEB-INF/classes</outputDirectory>
